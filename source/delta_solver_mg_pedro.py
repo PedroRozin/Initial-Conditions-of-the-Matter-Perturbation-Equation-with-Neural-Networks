@@ -288,7 +288,7 @@ class DeltaSolver:
                 term4.append((nini**2*3*self.Om_m_0)/(2*H**2*ai**3)*self.Geff(zi, r_val))
         return np.array(term1), np.array(term2),np.array(term3), np.array(term4)
 
-    def red_para_condiciones_iniciales(self, parametros = [0.03, 0.1, 0.68, 0.3], name ='tanh_buena_v2'):
+    def red_para_condiciones_iniciales(self, parametros = [0.03, 0.1, 0.68, 0.3], name ='NN_z_approx_32'):
         """ 
         Initial conditions for delta and delta prime at a_ini, calculated from the trained neural network.
         The neural network takes as input the parameters [a_ini, k, h, Om_m_0] and outputs [delta_ini, delta_p_ini].
@@ -298,11 +298,12 @@ class DeltaSolver:
         torch.manual_seed(0)
         model = ImprovedRegressionNN(activation='tanh')
         #THIS PATH NEEDS TO BE CHANGED TO MATCH YOUR LOCAL SETUP
+        main_path = f'/home/pedrorozin/paper_tesis2025/outputs/neural_networks/' #CHANGE THIS TO MATCH YOUR LOCAL SETUP
         folder_path = str(name)
         network_name = f'_{folder_path}'
-        path_model = f'/home/pedrorozin/scripts/outputs_pedro/neural_networks/{folder_path}/regression_model{network_name}.pth'
-        path_scaler_X = f'/home/pedrorozin/scripts/outputs_pedro/neural_networks/{folder_path}/scaler_X{network_name}.pkl'
-        path_scaler_y = f'/home/pedrorozin/scripts/outputs_pedro/neural_networks/{folder_path}/scaler_y{network_name}.pkl'
+        path_model = f'{main_path}{folder_path}/regression_model{network_name}.pth'
+        path_scaler_X = f'{main_path}{folder_path}/scaler_X{network_name}.pkl'
+        path_scaler_y = f'{main_path}{folder_path}/scaler_y{network_name}.pkl'
         model.load_state_dict(torch.load(path_model))  
         model.eval()
         scaler_X = joblib.load(path_scaler_X)
@@ -458,7 +459,7 @@ class VectorizedDeltaSolver:
         """Compute the Gamma function vectorized"""
         return (r + b) * ((r + b)**2 - 2*b) / (4*b*r)
 
-    def condiciones_iniciales_vectorized(self, name='tanh_buena_v2'):
+    def condiciones_iniciales_vectorized(self, name='NN_z_approx_32'):
         """
         Compute initial conditions vectorized for all k's using the neural network. 
         The neural network takes as input the parameters [a_ini, k, h, Om_m_0] and outputs [delta_ini, delta_p_ini].
@@ -468,11 +469,12 @@ class VectorizedDeltaSolver:
         device_nn = torch.device('cpu')  # la red neuronal ENTRENADA funciona en CPU
         torch.manual_seed(0)
         model = ImprovedRegressionNN(activation='tanh')
+        main_path = f'/home/pedrorozin/paper_tesis2025/outputs/neural_networks/' #CHANGE THIS TO MATCH YOUR LOCAL SETUP
         folder_path = str(name)
         network_name = f'_{folder_path}'
-        path_model = f'/home/pedrorozin/scripts/outputs_pedro/neural_networks/{folder_path}/regression_model{network_name}.pth'
-        path_scaler_X = f'/home/pedrorozin/scripts/outputs_pedro/neural_networks/{folder_path}/scaler_X{network_name}.pkl'
-        path_scaler_y = f'/home/pedrorozin/scripts/outputs_pedro/neural_networks/{folder_path}/scaler_y{network_name}.pkl'
+        path_model = f'{main_path}{folder_path}/regression_model{network_name}.pth'
+        path_scaler_X = f'{main_path}{folder_path}/scaler_X{network_name}.pkl'
+        path_scaler_y = f'{main_path}{folder_path}/scaler_y{network_name}.pkl'
         
         model.load_state_dict(torch.load(path_model, map_location=device_nn))
         model.eval()
