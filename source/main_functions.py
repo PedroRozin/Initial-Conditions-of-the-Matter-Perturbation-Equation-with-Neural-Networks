@@ -11,34 +11,6 @@ import torch
 import torch.nn as nn
 
 #%% Red Neuronal
-
-class RegressionNN(nn.Module):
-    """ Neural network for regression with 4 input features and 2 output targets.
-        Está pensada originalmente para que los features sean: a, Omega_m, kh (o k solo), h y los targets delta_m y delta_prime_m.
-        Architecture:
-        - Input layer: 4 neurons (features)
-        - Hidden layers: 4 layers with 128 neurons each, ReLU activation
-        - Hidden layer: 1 layer with 64 neurons, ReLU activation
-        - Output layer: 2 neurons (targets)
-        """
-    def __init__(self):
-        super().__init__()
-        self.network = nn.Sequential(
-            nn.Linear(4, 128),
-            nn.ReLU(),
-            nn.Linear(128, 128),
-            nn.ReLU(),
-            nn.Linear(128, 128),
-            nn.ReLU(),
-            nn.Linear(128, 128),
-            nn.ReLU(),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Linear(64, 2)   # salida de 2 targets
-        )
-        
-    def forward(self, x):
-        return self.network(x)
     
 class ImprovedRegressionNN(nn.Module):
     def __init__(self, activation='tanh'):
