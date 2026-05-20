@@ -1,0 +1,7 @@
+Grilla de parámetros:
+Omega_m: min 0.3, max 0.32, len 3
+h: min 0.65, max 0.67, len 3
+A_s fijo en 2.e-9
+Número total de puntos en la grilla: 774
+min a_ini: 0.03000113, max a_ini: 0.03452209
+Rango de k_horizon: min 0.0066495771605391h/Mpc, max 0.0068726739541072h/Mpc

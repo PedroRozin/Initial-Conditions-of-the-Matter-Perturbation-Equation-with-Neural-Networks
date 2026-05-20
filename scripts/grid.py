@@ -47,7 +47,7 @@ def main():
 
     # Folder where the grid will be saved. Check if it exists, if not create it.
     path_folder = '/home/pedrorozin/paper_tesis2025/outputs/grids/'
-    n = 'params_for_training1'
+    n = 'grid_z_approx_100'
 
     error_log = f'{path_folder}/{n}/errors_log_{n}.txt' # Where errors will be logged
 
@@ -58,20 +58,25 @@ def main():
     #==========================
 
     # # Range of values for each parameter
-    # omega_m_values = np.arange(0.153, 0.453, 0.033)
-    # h_values = np.arange(0.643, 0.763, 0.033)
+    omega_m_values = np.arange(0.153, 0.453, 0.005)
+    h_values = np.arange(0.643, 0.763, 0.005)
 
     # Range of values for each parameter for validation
-    omega_m_values = np.arange(0.163, 0.443, 0.005)
-    h_values = np.arange(0.653, 0.743, 0.003)
+    # omega_m_values = np.arange(0.163, 0.443, 0.005)
+    # h_values = np.arange(0.653, 0.743, 0.003)
     
-    omega_m_values = np.arange(0.30, 0.32, 0.01)
-    # A_s_values = np.arange(1.9e-09, 2.3e-09 , 0.3e-09)
-    h_values = np.arange(0.65, 0.67, 0.01)
+    # omega_m_values = np.arange(0.30, 0.32, 0.01)
+    # h_values = np.arange(0.65, 0.67, 0.01)
     # k_values = np.arange(0.02, 0.22, 0.02)
     
     results = []
-    a_ini = 0.03 # z \approx 33
+    
+    #choose the initial momento for the integrations. This is crucial for the results, as it determines the initial conditions for the perturbations.
+    #the moment can be chosen by a_ini or z_ini, but we will use a_ini for the calculations. 
+    
+    z_ini= 100
+    # a_ini = 0.03 # z \approx 33
+    a_ini = 1/(1+z_ini)
     
     # Output file to save results incrementally
     output_file = f'{path_folder}/{n}/grilla_results_{n}.csv'
@@ -88,7 +93,7 @@ def main():
             _perturbations = M.get_perturbations() # Dummy variable. Only serves to execute CLASS compute().
             
             # 5. Read the text file with `read_adhoc_txt` to obtain the perturbations and their derivatives.
-            df = read_adhoc_txt(file_path='/home/pedrorozin/paper_tesis2025/delta_prime_cdm.txt')
+            df = read_adhoc_txt(file_path='/home/pedrorozin/scripts/class_pedro/delta_prime_cdm.txt')
             
             # Filter DF with a_ini: keep the values of a >= a_ini. 
             df = df[df['a'] >= a_ini]
@@ -97,7 +102,7 @@ def main():
 
             # 7. Calculate k_horizon() to get the horizon scale k.
             a_ini_actual = df['a'].min()  # The minimum 'a' after initial filters
-            k_hor = k_horizon(a_ini=a_ini_actual, omega_m=omega_m, omega_r=9.1e-5, c=3e5) # c in km/s, k_hor in h/Mpc
+            k_hor = k_horizon(a_ini=a_ini_actual, omega_m=omega_m, h= h) # c in km/s, k_hor in h/Mpc
             df['k h'] = df['k'] / h # k to h/Mpc
             
             # Drop all kh > 0.25 (Currently commented out)
@@ -171,12 +176,13 @@ def main():
         finally:  # Clean up everything
             try:
                 M.struct_cleanup()
+                del M
             except:
                 pass
 
     # 13. Delete the adhoc file to generate a new one in the next iteration.
-    if os.path.exists('/home/pedrorozin/paper_tesis2025/delta_prime_cdm.txt'):
-        os.remove('/home/pedrorozin/paper_tesis2025/delta_prime_cdm.txt')
+    if os.path.exists('/home/pedrorozin/scripts/class_pedro/delta_prime_cdm.txt'):
+        os.remove('/home/pedrorozin/scripts/class_pedro/delta_prime_cdm.txt')
     gc.collect()
         
     # 14. Read final results to generate statistics

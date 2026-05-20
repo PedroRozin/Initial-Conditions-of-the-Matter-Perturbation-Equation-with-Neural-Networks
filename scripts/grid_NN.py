@@ -37,7 +37,7 @@ print(f" Dispositivo seleccionado: {device}")
 print("="*50)
 
 path_folder = '/home/pedrorozin/paper_tesis2025/outputs/neural_networks/'
-n = 'NN_z_approx_33'
+n = 'NN_z_approx_32'
 
 if os.path.exists(path_folder + n):
     raise FileExistsError(f"El directorio {path_folder}/{n} ya existe.")
@@ -51,7 +51,8 @@ if not os.path.exists(path_folder + n):
 # ===========================
 
 #select grid for training
-path_grilla = '/home/pedrorozin/paper_tesis2025/outputs/grillas/params_para_entrenamiento_v1/grilla_results_para_entrenamiento.csv'
+main_path = '/home/pedrorozin/paper_tesis2025/outputs/grids/'
+path_grilla = f'{main_path}params_for_training_z_approx_32/grilla_results_params_for_training_z_approx_32.csv'
 df_grilla = pd.read_csv(path_grilla)
 mask = (df_grilla['k h'] < 0.21) & (df_grilla['a'] < 0.035) #this is important for numerical reasons. its crucial that the grid has a dense ammount of values in the desire regions
 df = df_grilla[mask].copy()
