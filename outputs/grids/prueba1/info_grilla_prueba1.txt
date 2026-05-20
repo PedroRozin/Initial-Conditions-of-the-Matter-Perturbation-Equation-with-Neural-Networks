@@ -1,0 +1,7 @@
+Parameter grid:
+Omega_m: min 0.3, max 0.32, length 3
+h: min 0.65, max 0.67, length 3
+A_s fixed at 2.e-9
+Total number of points in the grid: 3744
+min a_ini: 0.009901138, max a_ini: 0.01168758
+k_horizon range: min 0.0117038799766479 h/Mpc, max 0.0120764803256093 h/Mpc
