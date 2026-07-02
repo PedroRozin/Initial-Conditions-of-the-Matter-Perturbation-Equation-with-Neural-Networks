@@ -1,8 +1,8 @@
 # Initial Conditions of the Matter Perturbation Equation using Neural Networks
 
-This repository contains utilities, notebooks, and scripts used to study the matter perturbation equation in modified gravity and $\Lambda$CDM, including numerical solvers and post-processing tools for quantities such as $\delta(a)$, $f(k,z)$, $\sigma_8(z)$, and $f\sigma_8(z)$.
+This repository contains utilities, notebooks, and scripts used to study the matter perturbation equation in modified gravity and $\Lambda$ CDM, including numerical solvers and post-processing tools for quantities such as $\delta(a)$, $f(k,z)$, $\sigma_8(z)$, and $f\sigma_8(z)$.
 
-Repository: https://github.com/PedroRozin/Initial-Conditions-of-the-Matter-Perturbation-Equation-with-Neural-Networks
+The main result of this repo is the trained neural network in the `outputs/` folder. If you just want to use them, there is no need to clone this repository; you can just download them and use any solver as an example of use. If you want to implement the algorithm to train another NN or to verify its validity, follow the Recommended Installation section. To do this, you must also install the modified CLASS in https://github.com/PedroRozin/Modified_CLASS
 
 ## Project layout
 
@@ -100,21 +100,27 @@ The code also imports `classy` for cosmology calculations. In this repository, t
 
 That installation step requires a working C/C++ toolchain and `make`, because CLASS is compiled from source during installation.
 
-Some notebooks also import `funciones_tesis`. That module is not shipped inside this repository, so if you want the notebooks to run exactly as they do in my environment, you must also make that helper available separately or move it into this repo.
+## If the CLASS build fails, install it manually with:
+
+```bash
+git clone https://github.com/PedroRozin/Modified_CLASS.git
+cd Modified_CLASS/class_public
+make clean
+make -j$(nproc)
+cd python
+python -m pip install .
+```
+If this also fails, install it as you usually install the original CLASS from `https://github.com/lesgourg/class_public/tree/master`
 
 ## Usage examples
 
-After installation, you can import the modules directly from Python:
-
-```python
-import main_functions as ft
-from delta_solver_mg_pedro import VectorizedDeltaSolver
-```
 
 Example solver setup:
 
 ```python
 import numpy as np
+import main_functions as ft
+from delta_solver_mg_pedro import VectorizedDeltaSolver
 
 h = 0.68
 k_array = np.logspace(np.log10(0.006), np.log10(0.2), 100) / h
