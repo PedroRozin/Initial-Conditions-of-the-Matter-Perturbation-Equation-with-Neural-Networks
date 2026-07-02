@@ -1,0 +1,11 @@
+numpy
+matplotlib
+pandas
+scipy
+Cython
+torch
+tqdm
+joblib
+scikit-learn
+# Modified CLASS fork used by the project. This provides the `classy` module.
+git+https://github.com/PedroRozin/Modified_CLASS.git@main#egg=classy&subdirectory=class_public

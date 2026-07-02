@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "paper-tesis2025"
+version = "0.1.0"
+description = "Utilities for matter perturbation and fsigma8 calculations"
+readme = "README.md"
+requires-python = ">=3.10"
+
+[tool.setuptools]
+package-dir = {"" = "source"}
+py-modules = ["main_functions", "delta_solver_mg_pedro"]
