@@ -2,7 +2,7 @@
 
 This repository contains utilities, notebooks, and scripts used to study the matter perturbation equation in modified gravity and $\Lambda$ CDM, including numerical solvers and post-processing tools for quantities such as $\delta(a)$, $f(k,z)$, $\sigma_8(z)$, and $f\sigma_8(z)$.
 
-The main result of this repo is the trained neural network in the `outputs/` folder. If you just want to use them, there is no need to clone this repository; you can just download them and use any solver as an example of use. If you want to implement the algorithm to train another NN or to verify its validity, follow the Recommended Installation section. To do this, you must also install the modified CLASS in https://github.com/PedroRozin/Modified_CLASS
+The main result of this repo is the trained neural network in the `outputs/` folder. If you just want to use them, there is no need to clone this repository; you can just download them and use any solver as an example of use. If you want to implement the algorithm to train another NN or to verify its validity, follow the Recommended Installation section. To do this, you must also install the modified CLASS in https://github.com/PedroRozin/Modified_CLASS . This version creates a .txt file which stocks not only the matter perturbations, but also their derivatives.
 If you would like to use the solver, but you are not interested in compare the $\Lambda$ CDM solutions nor the Initial Conditions with Boltzmann codes, then there is no need to install the modified CLASS.
 
 ## Project layout
@@ -99,7 +99,7 @@ The repository uses the following Python packages in the source code and noteboo
 
 The code also imports `classy` for cosmology calculations. In this repository, that dependency is provided by a modified CLASS fork stored at `https://github.com/PedroRozin/Modified_CLASS`, and `requirements.txt` installs it directly from the `class_public/` subdirectory on GitHub.
 
-That installation step requires a working C/C++ toolchain and `make`, because CLASS is compiled from source during installation.
+That installation step requires a working C/C++ toolchain and `make`, because CLASS is compiled from source during installation. Remember that this is needed only if you want to compare something related to the Boltzmann solver.
 
 ## If the CLASS build fails, install it manually with:
 
@@ -141,11 +141,4 @@ This creates a vectorized solver using your chosen cosmological parameters and w
 1. Activate the environment you want to use.
 2. Make sure the repository is installed with `pip install -e .` or that `source/` is on `sys.path`.
 3. Open the notebooks in `notebooks/` and run the cells in order.
-
-## Notes
-
-- Do not commit `.venv/` to the repository.
-- Keep `pyproject.toml` under version control so other users can install the project consistently.
-- Large generated outputs should stay in `outputs/` only if they are meant to be shared; otherwise consider ignoring temporary files locally.
-
 
