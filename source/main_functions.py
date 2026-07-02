@@ -64,13 +64,26 @@ def compute_delta_m(delta_cdm, delta_b, omega_cdm, omega_b):
     result = np.array(result, dtype='float128')
   return result
 
-def k_horizon(a_ini=.01, omega_m=0.3, omega_r=9.1e-5, c=299792458):
-  """Calculate the comoving horizon scale dados los omegas que le pongamos y el a_ini.
+def k_horizon(a_ini=.01, omega_m=0.3, omega_r=9.1e-5, c=299792458, h= None):
+  """Calculate the comoving horizon scale dados los omegas que le pongamos y el a_ini. 
+      Be carefull with the omega_r, this value asumes h=.68, if you change h you should change omega_r accordingly (omega_r = 4.18e-5 * h**-2).
+    Args:
+        a_ini (float): Initial scale factor.
+        omega_m (float): Matter density parameter.
+        omega_r (float): Radiation density parameter.
+        c (float): Speed of light in km/s.
+        h (float): Hubble parameter (optional, used to convert k_hor to h/Mpc if needed).
+        
   Returns:
     float: The comoving horizon scale in h/Mpc (multiply by h in case its needed).
   """
-  omega_l= 1-omega_m-omega_r
-  k_val = 2 * np.pi * a_ini * 100 / c * np.sqrt(omega_m / a_ini**3 + omega_r / a_ini**4 + omega_l)
+  if h is not None:
+      Omega_r = 4.18e-5 * h**-2
+  else:
+        Omega_r = omega_r
+  omega_l= 1-omega_m-Omega_r
+  
+  k_val = 2 * np.pi * a_ini * 100 / c * np.sqrt(omega_m / a_ini**3 + Omega_r / a_ini**4 + omega_l)
   return k_val
 
 def deriv_tau_to_a(df: pd.DataFrame, column_name='delta_dot_cdm')-> pd.DataFrame:
