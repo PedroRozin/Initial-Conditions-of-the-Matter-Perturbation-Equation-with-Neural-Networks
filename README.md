@@ -3,6 +3,7 @@
 This repository contains utilities, notebooks, and scripts used to study the matter perturbation equation in modified gravity and $\Lambda$ CDM, including numerical solvers and post-processing tools for quantities such as $\delta(a)$, $f(k,z)$, $\sigma_8(z)$, and $f\sigma_8(z)$.
 
 The main result of this repo is the trained neural network in the `outputs/` folder. If you just want to use them, there is no need to clone this repository; you can just download them and use any solver as an example of use. If you want to implement the algorithm to train another NN or to verify its validity, follow the Recommended Installation section. To do this, you must also install the modified CLASS in https://github.com/PedroRozin/Modified_CLASS
+If you would like to use the solver, but you are not interested in compare the $\Lambda$ CDM solutions nor the Initial Conditions with Boltzmann codes, then there is no need to install the modified CLASS.
 
 ## Project layout
 
@@ -77,7 +78,7 @@ If you do not want to install the project at all, you can temporarily add the `s
 
 ```python
 import sys
-sys.path.append('/home/pedrorozin/paper_tesis2025/source')
+sys.path.append('your_path_to_source')
 ```
 
 This is convenient for quick tests, but it is less portable than installing the project with `pip install -e .`.
