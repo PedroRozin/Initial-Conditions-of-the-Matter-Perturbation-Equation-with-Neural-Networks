@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader, TensorDataset, random_split
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler, RobustScaler
-from sklearn.metrics import mean_absolute_error, r2_score
+from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
 from sklearn.model_selection import train_test_split
 import joblib
 import csv
@@ -37,7 +37,7 @@ print(f" Dispositivo seleccionado: {device}")
 print("="*50)
 
 path_folder = '/home/pedrorozin/paper_tesis2025/outputs/neural_networks/'
-n = 'NN_z_approx_32'
+n = 'NN_z_approx_32_trained_big_grid'
 
 if os.path.exists(path_folder + n):
     raise FileExistsError(f"El directorio {path_folder}/{n} ya existe.")
@@ -52,7 +52,8 @@ if not os.path.exists(path_folder + n):
 
 #select grid for training
 main_path = '/home/pedrorozin/paper_tesis2025/outputs/grids/'
-path_grilla = f'{main_path}params_for_training_z_approx_32/grilla_results_params_for_training_z_approx_32.csv'
+name_grid = 'grid_z_approx_32_training_data_big'
+path_grilla = f'{main_path}{name_grid}/grilla_results_{name_grid}.csv'
 df_grilla = pd.read_csv(path_grilla)
 mask = (df_grilla['k h'] < 0.21) & (df_grilla['a'] < 0.035) #this is important for numerical reasons. its crucial that the grid has a dense ammount of values in the desire regions
 df = df_grilla[mask].copy()
@@ -60,7 +61,7 @@ df = df_grilla[mask].copy()
 # Features y targets
 
 #filter features with k h <= 0.25 (no lineal regime)
-features = df[["a", "k h", "h", "Omega_m"]][df['k h'] <= 0.25].values
+features = df[["a", "k h", "h", "Omega_m"]][df['k h'] <= 0.4].values
 
 targets = df[["delta_m", "delta_prime_m"]].values
 
@@ -72,6 +73,9 @@ X_train, X_val, y_train, y_val = train_test_split(
     random_state=100, 
     shuffle=True
 )
+
+#save y_val to csv for later evaluation
+pd.DataFrame(y_val, columns=["delta_m", "delta_prime_m"]).to_csv(f"{path_folder}/{n}/y_val_{n}.csv", index=False)
 
 # scaling using training set stats. We will save the scalers to apply the same transformation to the test set and future data.
 
@@ -216,6 +220,7 @@ y_pred_phys = scaler_y.inverse_transform(y_pred)
 # some metrics
 mae_targets = mean_absolute_error(y_true_phys, y_pred_phys, multioutput="raw_values")
 r2_targets = r2_score(y_true_phys, y_pred_phys, multioutput="raw_values")
+rmse_targets = np.sqrt(mean_squared_error(y_true_phys, y_pred_phys, multioutput="raw_values"))
 
 
 
@@ -228,9 +233,9 @@ r2_targets = r2_score(y_true_phys, y_pred_phys, multioutput="raw_values")
 
 with open(f"{path_folder}/{n}/final_metrics_{n}.csv", "w", newline="") as f:
     writer = csv.writer(f)
-    writer.writerow(["Target", "MAE", "R2"])
-    for name, mae, r2 in zip(["delta_m", "delta_prime_m"], mae_targets, r2_targets):
-        writer.writerow([name, mae, r2])
+    writer.writerow(["Target", "MAE", "RMSE", "R2"])
+    for name, mae, rmse, r2 in zip(["delta_m", "delta_prime_m"], mae_targets, rmse_targets, r2_targets):
+        writer.writerow([name, mae, rmse, r2])
 
 with open(f"{path_folder}/{n}/training_history_{n}.csv", "w", newline="") as f:
     writer = csv.writer(f)
@@ -294,15 +299,15 @@ joblib.dump(scaler_y, f"{path_folder}/{n}/scaler_y_{n}.pkl")
 #print final summary
 
 print("="*60)
-print(f"🚀 TRAINING COMPLETED - Network: {n}")
+print(f" TRAINING COMPLETED - Network: {n}")
 print("="*60)
-print(f"📊 Training epochs: {len(train_losses)}/{epochs}")
-print(f"🔥 Early stopping: {'Yes' if len(train_losses) < epochs else 'No'}")
-print(f"📈 Final loss - Train: {train_losses[-1]:.6f} | Val: {val_losses[-1]:.6f}")
-print(f"🎯 Best val_loss: {best_val_loss:.6f}")
-print(f"📚 Learning rate - Initial: {LR:.6f} | Final: {optimizer.param_groups[0]['lr']:.8f}")
+print(f"- Training epochs: {len(train_losses)}/{epochs}")
+print(f"- Early stopping: {'Yes' if len(train_losses) < epochs else 'No'}")
+print(f"- Final loss - Train: {train_losses[-1]:.6f} | Val: {val_losses[-1]:.6f}")
+print(f"- Best val_loss: {best_val_loss:.6f}")
+print(f"- Learning rate - Initial: {LR:.6f} | Final: {optimizer.param_groups[0]['lr']:.8f}")
 print("="*60)
-print("📁 Generated archives:")
+print("Generated archives:")
 print(f"✅ Model: regression_model_{n}.pth")
 print(f"✅ Scaler X: scaler_X_{n}.pkl")
 print(f"✅ Scaler y: scaler_y_{n}.pkl")
@@ -310,5 +315,5 @@ print(f"✅ History: training_history_{n}.csv (with LR)")
 print(f"✅ Metrics: final_metrics_{n}.csv")
 print(f"✅ Complete info: info_{n}.txt")
 print(' ')
-print(f"ROSARIO CENTRAL.")
+print(f"ROSARIO CENTRAL EL MÁS GRANDE DEL INTERIOR.")
 print("="*60)

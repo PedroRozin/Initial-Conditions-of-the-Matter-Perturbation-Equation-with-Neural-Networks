@@ -2,12 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
+from pathlib import Path
 from classy import Class
 from itertools import product
 from tqdm import tqdm
 import sys
 import gc
 import traceback
+import time
 
 sys.path.append('/home/pedrorozin/paper_tesis2025/source/')
 from main_functions import common_settings, compute_delta_m, k_horizon, read_adhoc_txt, deriv_tau_to_a, get_sigma8
@@ -47,7 +49,7 @@ def main():
 
     # Folder where the grid will be saved. Check if it exists, if not create it.
     path_folder = '/home/pedrorozin/paper_tesis2025/outputs/grids/'
-    n = 'grid_z_approx_100'
+    n = 'grid_z_approx_32_training'
 
     error_log = f'{path_folder}/{n}/errors_log_{n}.txt' # Where errors will be logged
 
@@ -58,9 +60,13 @@ def main():
     #==========================
 
     # # Range of values for each parameter
-    omega_m_values = np.arange(0.153, 0.453, 0.005)
-    h_values = np.arange(0.643, 0.763, 0.005)
+    omega_m_values = np.arange(0.15, 0.452, 0.002)
+    h_values = np.arange(0.64, 0.762, 0.002)
 
+    # omega_m_values = np.arange(0.153, 0.453, 0.005)
+    # h_values = np.arange(0.643, 0.763, 0.005)
+    
+    
     # Range of values for each parameter for validation
     # omega_m_values = np.arange(0.163, 0.443, 0.005)
     # h_values = np.arange(0.653, 0.743, 0.003)
@@ -74,26 +80,32 @@ def main():
     #choose the initial momento for the integrations. This is crucial for the results, as it determines the initial conditions for the perturbations.
     #the moment can be chosen by a_ini or z_ini, but we will use a_ini for the calculations. 
     
-    z_ini= 100
-    # a_ini = 0.03 # z \approx 33
-    a_ini = 1/(1+z_ini)
+    # z_ini= 100
+    a_ini = 0.03 # z \approx 33
+    # a_ini = 1/(1+z_ini)
     
     # Output file to save results incrementally
     output_file = f'{path_folder}/{n}/grilla_results_{n}.csv'
     file_exists = False  # To check if it already has a header
+    adhoc_file = Path.cwd() / 'delta_prime_cdm.txt'
+
+    print(f'Using adhoc file: {adhoc_file}', flush=True)
     
     for omega_m, h in tqdm(product(omega_m_values, h_values)):
         
         try:
+            iter_start = time.time()
+            print(f'Running CLASS for omega_m={omega_m:.3f}, h={h:.3f}...', flush=True)
             # 3. Set a Universe given a set of parameters with `common_settings`.
             M = common_settings(k=0.1, omega_m=omega_m, h=h) # This is actually CLASS Omega_m, not omega_m
 
             # 4. get_perturbations() to obtain the perturbations of that universe.
             # This executes CLASS.compute() and returns perturbations in the adhoc file.
             _perturbations = M.get_perturbations() # Dummy variable. Only serves to execute CLASS compute().
+            print(f'CLASS step finished in {time.time() - iter_start:.2f}s', flush=True)
             
-            # 5. Read the text file with `read_adhoc_txt` to obtain the perturbations and their derivatives.
-            df = read_adhoc_txt(file_path='/home/pedrorozin/scripts/class_pedro/delta_prime_cdm.txt')
+            # 5. read the text file with `read_adhoc_txt` to obtain the perturbations and their derivatives.
+            df = read_adhoc_txt(file_path=str(adhoc_file))
             
             # Filter DF with a_ini: keep the values of a >= a_ini. 
             df = df[df['a'] >= a_ini]
@@ -102,14 +114,14 @@ def main():
 
             # 7. Calculate k_horizon() to get the horizon scale k.
             a_ini_actual = df['a'].min()  # The minimum 'a' after initial filters
-            k_hor = k_horizon(a_ini=a_ini_actual, omega_m=omega_m, h= h) # c in km/s, k_hor in h/Mpc
+            k_hor = k_horizon(a_ini=a_ini_actual, omega_m=omega_m, c=3e5, h=h) # c in km/s, k_hor in h/Mpc
             df['k h'] = df['k'] / h # k to h/Mpc
             
             # Drop all kh > 0.25 (Currently commented out)
             # df = df[df['k h'] <= 0.25]
             
             # 8. Filter the DataFrame to get only perturbations with k >= k_horizon.
-            df_filtered = df[df['k h'] >= k_hor].copy()
+            df_filtered = df[df['k h'] >= k_hor/20].copy()
 
             uniques_ks = df_filtered['k'].unique()
             
@@ -181,8 +193,8 @@ def main():
                 pass
 
     # 13. Delete the adhoc file to generate a new one in the next iteration.
-    if os.path.exists('/home/pedrorozin/scripts/class_pedro/delta_prime_cdm.txt'):
-        os.remove('/home/pedrorozin/scripts/class_pedro/delta_prime_cdm.txt')
+    if adhoc_file.exists():
+        os.remove(adhoc_file)
     gc.collect()
         
     # 14. Read final results to generate statistics
