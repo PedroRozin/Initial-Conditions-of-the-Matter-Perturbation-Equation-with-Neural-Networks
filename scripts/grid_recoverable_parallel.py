@@ -231,7 +231,7 @@ def _process_block(block_payload):
                 a_ini_actual = df['a'].min()
                 k_hor = k_horizon(a_ini=a_ini_actual, omega_m=omega_m, c=3e5, h=h)
                 df['k h'] = df['k'] / h
-                k_mask = (df['k h'] >= (k_hor / 100)) & (df['k h'] <= 0.5)
+                k_mask = (df['k h'] >= (k_hor / 800)) & (df['k h'] <= 0.5)
                 df_filtered = df.loc[k_mask].copy()
                 
 
@@ -350,7 +350,7 @@ def main():
     """
 
     path_folder = '/home/pedrorozin/paper_tesis2025/outputs/grids/'
-    n = 'grid_z_approx_32_training_data_big'
+    n = 'grid_z_approx_32_training_data_v3'
 
     output_dir = Path(path_folder) / n
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -361,14 +361,14 @@ def main():
     resume_precision = RESUME_PRECISION
 
     # training grid.
-    omega_m_values = np.arange(0.09, 0.462, 0.002)
-    h_values = np.arange(0.63, 0.772, 0.002)
+    omega_m_values = np.arange(0.084, 0.462, 0.002)
+    h_values = np.arange(0.62, 0.772, 0.002)
 
     #validation grid
     # omega_m_values = np.arange(0.154, 0.444, 0.0012)
     # h_values = np.arange(0.634, 0.754, 0.0012)
 
-    a_ini = 0.03  # z \approx 33
+    a_ini = 0.0295  # z \approx 33
 
     detected_cores, usable_cores, default_workers, default_block_size = _detect_parallel_defaults()  # Inspect CPU capacity once and derive safe defaults.
     block_size = max(1, int(os.environ.get('GRID_BLOCK_SIZE', str(default_block_size))))  # Allow manual override, otherwise use the core-based default.

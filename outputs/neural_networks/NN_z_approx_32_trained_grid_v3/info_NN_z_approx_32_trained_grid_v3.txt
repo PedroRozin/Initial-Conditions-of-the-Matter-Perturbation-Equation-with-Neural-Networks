@@ -1,0 +1,54 @@
+==================================================
+CONFIGURACIÓN DEL ENTRENAMIENTO
+==================================================
+Device usado: cuda
+GPU: NVIDIA GeForce RTX 4050 Laptop GPU
+Memoria GPU total: 6.0 GB
+PyTorch version: 2.8.0+cu128
+
+ARQUITECTURA DE LA RED:
+------------------------------
+ImprovedRegressionNN(
+  (network): Sequential(
+    (0): Linear(in_features=4, out_features=128, bias=True)
+    (1): Tanh()
+    (2): Linear(in_features=128, out_features=128, bias=True)
+    (3): Tanh()
+    (4): Linear(in_features=128, out_features=128, bias=True)
+    (5): Tanh()
+    (6): Linear(in_features=128, out_features=128, bias=True)
+    (7): Tanh()
+    (8): Linear(in_features=128, out_features=64, bias=True)
+    (9): Tanh()
+    (10): Linear(in_features=64, out_features=2, bias=True)
+  )
+)
+------------------------------
+activation: Tanh()
+input_size: 4
+output_size: 2
+num_epochs_total: 800
+num_epochs_trained: 800
+early_stopped: No
+number of training samples: 908996
+number of validation samples: 227250
+batch_size: 128
+optimizer: AdamW
+initial_learning_rate: 0.0007
+final_learning_rate: 1e-07
+scheduler: ReduceLROnPlateau
+scheduler_factor: 0.6
+scheduler_patience: 15
+early_stopping_patience: 50
+loss_function: MSELoss
+
+RESULTADOS:
+------------------------------
+final_train_loss: 1.057514824117121e-08
+final_val_loss: 1.0857258684940335e-08
+best_val_loss: 1.083606880688814e-08
+
+DATOS:
+------------------------------
+grilla entrenada con:
+/home/pedrorozin/paper_tesis2025/outputs/grids/grid_z_approx_32_training_data_v3/grilla_results_grid_z_approx_32_training_data_v3.csv

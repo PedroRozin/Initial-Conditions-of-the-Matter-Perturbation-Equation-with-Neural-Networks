@@ -41,7 +41,6 @@ class ImprovedRegressionNN(nn.Module):
         return self.network(x)
 
 
-
 #%% Func. generales
 
 def compute_delta_m(delta_cdm, delta_b, omega_cdm, omega_b):
@@ -64,7 +63,7 @@ def compute_delta_m(delta_cdm, delta_b, omega_cdm, omega_b):
     result = np.array(result, dtype='float128')
   return result
 
-def k_horizon(a_ini=.01, omega_m=0.3, omega_r=9.1e-5, c=299792458, h= None):
+def k_horizon(a_ini=.01, omega_m=0.3, omega_r=9.1e-5, c=299792.458, h= None):
   """Calculate the comoving horizon scale dados los omegas que le pongamos y el a_ini. 
       Be carefull with the omega_r, this value asumes h=.68, if you change h you should change omega_r accordingly (omega_r = 4.18e-5 * h**-2).
     Args:

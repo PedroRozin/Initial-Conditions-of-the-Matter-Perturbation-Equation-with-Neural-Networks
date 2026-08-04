@@ -7,7 +7,6 @@ from scipy.constants import c as c_ms
 import torch
 import joblib
 import pandas as pd
-# from funciones_tesis import ImprovedRegressionNN
 import sys
 sys.path.append('/home/pedrorozin/source/')
 from main_functions import ImprovedRegressionNN
@@ -409,7 +408,7 @@ class VectorizedDeltaSolver:
     """
     def __init__(self, k_array, Om_m_0=DEFAULT_OM_M_0, Om_r_0=DEFAULT_OM_R_0, 
                  z_f=DEFAULT_Z_F, z_ini_HS=DEFAULT_Z_INI_HS, z_0=DEFAULT_Z_0, 
-                 c=DEFAULT_C, b=default_b, h=default_h, use_gpu=True):
+                 c=DEFAULT_C, b=default_b, h=default_h, use_gpu=True, verbose = True):
         """
         Initialize the vectorized solver with cosmological parameters and an array of k values.
         
@@ -438,7 +437,9 @@ class VectorizedDeltaSolver:
         
         # config device. GPU if available and use_gpu=True, otherwise CPU
         self.device = torch.device('cuda' if use_gpu and torch.cuda.is_available() else 'cpu')
-        print(f"VectorizedDeltaSolver usando: {self.device}")
+        
+        if verbose:
+            print(f"VectorizedDeltaSolver usando: {self.device}")
         
         # Convertir arrays a tensores de PyTorch
         self.k_tensor = torch.tensor(self.k_array, dtype=torch.float64, device=self.device)
@@ -561,7 +562,7 @@ class VectorizedDeltaSolver:
             
             return G_eff
         
-    def solve_delta_mg_vectorized_parallel(self, num_points=1000, n_jobs=16): #16 son la cantidad de cores que tengo yo
+    def solve_delta_mg_vectorized_parallel(self, num_points=1000, n_jobs=16, verbose = True): #16 son la cantidad de cores que tengo yo
         """
         Paralelized version to solve the delta equations for all k's using multiprocessing to distribute the k calculations
         across multiple processes.
@@ -610,7 +611,8 @@ class VectorizedDeltaSolver:
                    delta_ini[i], delta_p_ini[i], a_vec) #son todas las cosas que necesita el DeltaSolver
             args_list.append(args)
         
-        print(f"Resolviendo {self.n_k} valores de k en paralelo con {n_jobs} procesos...")
+        if verbose:
+            print(f"Resolviendo {self.n_k} valores de k en paralelo con {n_jobs} procesos...")
         
         # usar multiprocessing con la función global
         with Pool(n_jobs) as pool:
@@ -624,10 +626,11 @@ class VectorizedDeltaSolver:
             delta_results[i, :] = delta_interp
             delta_p_results[i, :] = delta_p_interp
         
-        print("Resolución paralela completada.")
+        if verbose:
+            print("Resolución paralela completada.")
         return a_vec, delta_results, delta_p_results
     
-    def solve_delta_lcdm_vectorized_parallel(self, num_points=1000, n_jobs=16):
+    def solve_delta_lcdm_vectorized_parallel(self, num_points=1000, n_jobs=16, verbose = True):
         """
         Paralelized version to solve the delta equations in LCDM for all k's using multiprocessing to distribute the k calculations
         across multiple processes.
@@ -670,7 +673,8 @@ class VectorizedDeltaSolver:
                    delta_ini[i], delta_p_ini[i], a_vec)
             args_list.append(args)
         
-        print(f"Resolviendo LCDM para {self.n_k} valores de k en paralelo con {n_jobs} procesos...")
+        if verbose:
+            print(f"Resolviendo LCDM para {self.n_k} valores de k en paralelo con {n_jobs} procesos...")
         
         # usar multiprocessing con la función global
         with Pool(n_jobs) as pool:
@@ -684,7 +688,8 @@ class VectorizedDeltaSolver:
             delta_results[i, :] = delta_interp
             delta_p_results[i, :] = delta_p_interp
         
-        print("Resolución paralela LCDM completada.")
+        if verbose:
+            print("Resolución paralela LCDM completada.")
         return a_vec, delta_results, delta_p_results
     
 

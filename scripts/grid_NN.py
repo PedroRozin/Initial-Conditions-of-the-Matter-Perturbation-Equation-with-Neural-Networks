@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset, random_split
+import copy
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler, RobustScaler
@@ -11,13 +12,12 @@ import joblib
 import csv
 from tqdm import tqdm
 import sys
-sys.path.append('/home/pedrorozin/paper_tesis2025/scripts')
-from funciones_tesis import ImprovedRegressionNN
+import main_functions as ft
+from main_functions import ImprovedRegressionNN
 import os
 
 # ===========================
 # GPU Configuration
-# ===========================
 print("verifying GPU...")
 print(f"PyTorch version: {torch.__version__}")
 print(f"CUDA disponible: {torch.cuda.is_available()}")
@@ -37,7 +37,7 @@ print(f" Dispositivo seleccionado: {device}")
 print("="*50)
 
 path_folder = '/home/pedrorozin/paper_tesis2025/outputs/neural_networks/'
-n = 'NN_z_approx_32_trained_big_grid'
+n = 'NN_z_approx_32_trained_grid_v3'
 
 if os.path.exists(path_folder + n):
     raise FileExistsError(f"El directorio {path_folder}/{n} ya existe.")
@@ -48,11 +48,11 @@ if not os.path.exists(path_folder + n):
 
 # ===========================
 # 1. load data y split and scale
-# ===========================
+
 
 #select grid for training
 main_path = '/home/pedrorozin/paper_tesis2025/outputs/grids/'
-name_grid = 'grid_z_approx_32_training_data_big'
+name_grid = 'grid_z_approx_32_training_data_v3'
 path_grilla = f'{main_path}{name_grid}/grilla_results_{name_grid}.csv'
 df_grilla = pd.read_csv(path_grilla)
 mask = (df_grilla['k h'] < 0.21) & (df_grilla['a'] < 0.035) #this is important for numerical reasons. its crucial that the grid has a dense ammount of values in the desire regions
@@ -75,12 +75,19 @@ X_train, X_val, y_train, y_val = train_test_split(
 )
 
 #save y_val to csv for later evaluation
-pd.DataFrame(y_val, columns=["delta_m", "delta_prime_m"]).to_csv(f"{path_folder}/{n}/y_val_{n}.csv", index=False)
+validation_df = pd.DataFrame(pd.concat(
+    [pd.DataFrame(X_val, columns=["a", "k h", "h", "Omega_m"]),
+     pd.DataFrame(y_val, columns=["delta_m", "delta_prime_m"])], axis=1)
+                             )
+validation_df.to_csv(f"{path_folder}/{n}/y_val_{n}.csv", index=False)
 
 # scaling using training set stats. We will save the scalers to apply the same transformation to the test set and future data.
 
-scaler_X = RobustScaler() #median and IQR
-scaler_y = RobustScaler()
+# scaler_X = RobustScaler() #median and IQR
+# scaler_y = RobustScaler()
+
+scaler_X = StandardScaler() #mean and std
+scaler_y = StandardScaler()
 
 X_train_scaled = scaler_X.fit_transform(X_train)
 X_val_scaled = scaler_X.transform(X_val)  # just transform, no fit for validation
@@ -99,21 +106,25 @@ train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
 val_dataset = TensorDataset(X_val_tensor, y_val_tensor)
 
 train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=128)
+val_loader = DataLoader(val_dataset, batch_size=128, shuffle=False)
 
 # ===========================
 # 2. Defining the model
-# ===========================
+
 
 model = ImprovedRegressionNN(activation='tanh').to(device)
 print(f" Modelo movido a: {next(model.parameters()).device}")
+#print NN architecture
+print("="*50)
+print(" Arquitectura de la red:")
+print(model)
 
 # ===========================
 # 3. loss function and optimizer
-# ===========================
+# Targets are standardized, so MAPE is not a good training signal here.
 criterion = nn.MSELoss()
-LR = 1e-3 #initial LR
-optimizer = optim.Adam(model.parameters(), lr=LR)
+LR = 7e-4 # initial LR
+optimizer = optim.AdamW(model.parameters(), lr=LR, weight_decay=1e-5)
 
 # Learning rate scheduler
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -132,12 +143,12 @@ best_model_state = None
 
 # ===========================
 # 4. training
-# ===========================
+
 epochs = 800
 train_losses, val_losses = [], []
 lr_history = []  # to save learning rate history
 
-for epoch in range(epochs):
+for epoch in tqdm(range(epochs)):
     # training
     model.train()
     train_loss = 0
@@ -148,6 +159,7 @@ for epoch in range(epochs):
         outputs = model(X_batch)
         loss = criterion(outputs, y_batch)
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
         train_loss += loss.item() * X_batch.size(0)
         train_samples += X_batch.size(0)
@@ -173,7 +185,7 @@ for epoch in range(epochs):
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         wait_early = 0
-        best_model_state = model.state_dict().copy()
+        best_model_state = copy.deepcopy(model.state_dict())
     else:
         wait_early += 1
         
@@ -192,9 +204,8 @@ for epoch in range(epochs):
     # GPU monitoring every 10 epochs
     if torch.cuda.is_available() and (epoch + 1) % 10 == 0:
         gpu_memory = torch.cuda.memory_allocated(0) / 1024**3
-        print(f"Epoch {epoch+1}/{epochs} | Train Loss: {train_loss:.6f} | Val Loss: {val_loss:.6f} | LR: {current_lr:.8f} | GPU: {gpu_memory:.2f}GB")
-    else:
-        print(f"Epoch {epoch+1}/{epochs} | Train Loss: {train_loss:.6f} | Val Loss: {val_loss:.6f} | LR: {current_lr:.8f}")
+        print(f"Epoch {epoch+1}/{epochs} | Train Loss: {train_loss:.8f} | Val Loss: {val_loss:.8f} | LR: {current_lr:.8f} | GPU: {gpu_memory:.2f}GB")
+
 
 # ===========================
 # 5.Save history and final metrics
@@ -268,12 +279,12 @@ with open(f"{path_folder}/{n}/info_{n}.txt", "w") as f:
     f.write(f"number of training samples: {len(train_dataset)}\n")
     f.write(f"number of validation samples: {len(val_dataset)}\n")
     f.write(f"batch_size: {train_loader.batch_size}\n")
-    f.write(f"optimizer: Adam\n")
+    f.write(f"optimizer: AdamW\n")
     f.write(f"initial_learning_rate: {LR}\n")
     f.write(f"final_learning_rate: {optimizer.param_groups[0]['lr']}\n")
     f.write(f"scheduler: ReduceLROnPlateau\n")
     f.write(f"scheduler_factor: 0.6\n")
-    f.write(f"scheduler_patience: 20\n")
+    f.write(f"scheduler_patience: 15\n")
     f.write(f"early_stopping_patience: 50\n")
     f.write(f"loss_function: MSELoss\n")
     f.write("\n")
