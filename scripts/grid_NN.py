@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset, random_split
 import copy
+import json
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler, RobustScaler
@@ -37,7 +38,7 @@ print(f" Dispositivo seleccionado: {device}")
 print("="*50)
 
 path_folder = '/home/pedrorozin/paper_tesis2025/outputs/neural_networks/'
-n = 'NN_z_approx_32_trained_grid_v3'
+n = 'NN_z_approx_32_trained_dense_v2'
 
 if os.path.exists(path_folder + n):
     raise FileExistsError(f"El directorio {path_folder}/{n} ya existe.")
@@ -52,18 +53,33 @@ if not os.path.exists(path_folder + n):
 
 #select grid for training
 main_path = '/home/pedrorozin/paper_tesis2025/outputs/grids/'
-name_grid = 'grid_z_approx_32_training_data_v3'
+name_grid = 'grid_z_approx_32_validation_data'
 path_grilla = f'{main_path}{name_grid}/grilla_results_{name_grid}.csv'
-df_grilla = pd.read_csv(path_grilla)
-mask = (df_grilla['k h'] < 0.21) & (df_grilla['a'] < 0.035) #this is important for numerical reasons. its crucial that the grid has a dense ammount of values in the desire regions
-df = df_grilla[mask].copy()
+usecols = ['a', 'k h', 'h', 'Omega_m', 'delta_m', 'delta_prime_m', 'k_horizon']
+df_grilla = pd.read_csv(
+    path_grilla,
+    usecols=lambda col: col in usecols,
+    dtype={
+        'a': 'float32',
+        'k h': 'float32',
+        'h': 'float32',
+        'Omega_m': 'float32',
+        'delta_m': 'float32',
+        'delta_prime_m': 'float32',
+        'k_horizon': 'float32',
+    },
+)
+mask = (df_grilla['k h'] < 0.21) & (df_grilla['a'] < 0.035)
+if 'k_horizon' in df_grilla.columns:
+    mask &= df_grilla['k h'] > df_grilla['k_horizon']
+df = df_grilla.loc[mask].copy()
 
 # Features y targets
 
 #filter features with k h <= 0.25 (no lineal regime)
-features = df[["a", "k h", "h", "Omega_m"]][df['k h'] <= 0.4].values
+features = df[["a", "k h", "h", "Omega_m"]][df['k h'] <= 0.4].to_numpy(dtype=np.float32)
 
-targets = df[["delta_m", "delta_prime_m"]].values
+targets = df[["delta_m", "delta_prime_m"]].to_numpy(dtype=np.float32)
 
 # Split train y val (80% train, 20% val) before scaling.
 
@@ -96,23 +112,44 @@ y_train_scaled = scaler_y.fit_transform(y_train)
 y_val_scaled = scaler_y.transform(y_val)  # just transform, no fit for validation
 
 # to torch tensors
-X_train_tensor = torch.tensor(X_train_scaled, dtype=torch.float32).to(device)
-X_val_tensor = torch.tensor(X_val_scaled, dtype=torch.float32).to(device)
-y_train_tensor = torch.tensor(y_train_scaled, dtype=torch.float32).to(device)
-y_val_tensor = torch.tensor(y_val_scaled, dtype=torch.float32).to(device)
+X_train_tensor = torch.tensor(X_train_scaled, dtype=torch.float32)
+X_val_tensor = torch.tensor(X_val_scaled, dtype=torch.float32)
+y_train_tensor = torch.tensor(y_train_scaled, dtype=torch.float32)
+y_val_tensor = torch.tensor(y_val_scaled, dtype=torch.float32)
 
 # datasets
 train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
 val_dataset = TensorDataset(X_val_tensor, y_val_tensor)
 
-train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=128, shuffle=False)
+batch_size = 256
+num_workers = 2 if torch.cuda.is_available() else 0
+train_loader = DataLoader(
+    train_dataset,
+    batch_size=batch_size,
+    shuffle=True,
+    pin_memory=torch.cuda.is_available(),
+    num_workers=num_workers,
+)
+val_loader = DataLoader(
+    val_dataset,
+    batch_size=batch_size,
+    shuffle=False,
+    pin_memory=torch.cuda.is_available(),
+    num_workers=num_workers,
+)
 
 # ===========================
 # 2. Defining the model
 
 
-model = ImprovedRegressionNN(activation='tanh').to(device)
+model_config = {
+    'activation': 'tanh',
+    'hidden_layers': (192, 192, 192, 128, 64),
+    'dropout': 0.0,
+    'use_layernorm': False,
+}
+
+model = ImprovedRegressionNN(**model_config).to(device)
 print(f" Modelo movido a: {next(model.parameters()).device}")
 #print NN architecture
 print("="*50)
@@ -123,7 +160,7 @@ print(model)
 # 3. loss function and optimizer
 # Targets are standardized, so MAPE is not a good training signal here.
 criterion = nn.MSELoss()
-LR = 7e-4 # initial LR
+LR = 6e-4 # initial LR
 optimizer = optim.AdamW(model.parameters(), lr=LR, weight_decay=1e-5)
 
 # Learning rate scheduler
@@ -131,13 +168,13 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(
     optimizer, 
     mode='min',           # minimize val_loss
     factor=0.6,          # reduce LR by this factor
-    patience=15,         # wait 15 epochs without improvement
+    patience=15,         # wait epochs without improvement
     min_lr=1e-7          # minimum LR
 )
 
 # Early stopping
 best_val_loss = float('inf')
-patience_early = 50
+patience_early = 80
 wait_early = 0
 best_model_state = None
 
@@ -154,7 +191,7 @@ for epoch in tqdm(range(epochs)):
     train_loss = 0
     train_samples = 0
     for X_batch, y_batch in train_loader:
-        X_batch, y_batch = X_batch.to(device), y_batch.to(device)  # Mover a GPU
+        X_batch, y_batch = X_batch.to(device, non_blocking=True), y_batch.to(device, non_blocking=True)  # Mover a GPU
         optimizer.zero_grad()
         outputs = model(X_batch)
         loss = criterion(outputs, y_batch)
@@ -171,7 +208,7 @@ for epoch in tqdm(range(epochs)):
     val_samples = 0
     with torch.no_grad():
         for X_batch, y_batch in val_loader:
-            X_batch, y_batch = X_batch.to(device), y_batch.to(device)  # Mover a GPU
+            X_batch, y_batch = X_batch.to(device, non_blocking=True), y_batch.to(device, non_blocking=True)  # Mover a GPU
             outputs = model(X_batch)
             loss = criterion(outputs, y_batch)
             val_loss += loss.item() * X_batch.size(0)
@@ -270,9 +307,12 @@ with open(f"{path_folder}/{n}/info_{n}.txt", "w") as f:
     f.write("\n")
     #write size of network (networks and layers)
     f.write("-"*30 + "\n")
-    f.write(f"activation: {model.network[1]}\n")  # si no son todas iguales, cambiar
+    f.write(f"activation: {model_config['activation']}\n")
     f.write(f"input_size: {model.network[0].in_features}\n")
     f.write(f"output_size: {model.network[-1].out_features}\n")
+    f.write(f"hidden_layers: {model_config['hidden_layers']}\n")
+    f.write(f"dropout: {model_config['dropout']}\n")
+    f.write(f"use_layernorm: {model_config['use_layernorm']}\n")
     f.write(f"num_epochs_total: {epochs}\n")
     f.write(f"num_epochs_trained: {len(train_losses)}\n")
     f.write(f"early_stopped: {'Yes' if len(train_losses) < epochs else 'No'}\n")
@@ -285,7 +325,7 @@ with open(f"{path_folder}/{n}/info_{n}.txt", "w") as f:
     f.write(f"scheduler: ReduceLROnPlateau\n")
     f.write(f"scheduler_factor: 0.6\n")
     f.write(f"scheduler_patience: 15\n")
-    f.write(f"early_stopping_patience: 50\n")
+    f.write(f"early_stopping_patience: 80\n")
     f.write(f"loss_function: MSELoss\n")
     f.write("\n")
     f.write("RESULTADOS:\n")
@@ -305,6 +345,8 @@ with open(f"{path_folder}/{n}/info_{n}.txt", "w") as f:
 torch.save(model.state_dict(), f"{path_folder}/{n}/regression_model_{n}.pth")
 joblib.dump(scaler_X, f"{path_folder}/{n}/scaler_X_{n}.pkl")
 joblib.dump(scaler_y, f"{path_folder}/{n}/scaler_y_{n}.pkl")
+with open(f"{path_folder}/{n}/model_config_{n}.json", "w") as f:
+    json.dump(model_config, f, indent=2)
 
 
 #print final summary

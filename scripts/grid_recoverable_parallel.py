@@ -350,7 +350,7 @@ def main():
     """
 
     path_folder = '/home/pedrorozin/paper_tesis2025/outputs/grids/'
-    n = 'grid_z_approx_32_training_data_v3'
+    n = 'grid_z_approx_32_validation_data'
 
     output_dir = Path(path_folder) / n
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -361,8 +361,10 @@ def main():
     resume_precision = RESUME_PRECISION
 
     # training grid.
-    omega_m_values = np.arange(0.084, 0.462, 0.002)
-    h_values = np.arange(0.62, 0.772, 0.002)
+    # omega_m_values = np.arange(0.084, 0.462, 0.002)
+    # h_values = np.arange(0.62, 0.772, 0.002)
+    omega_m_values = np.arange(0.084, 0.462, 0.0012)
+    h_values = np.arange(0.62, 0.772, 0.0012)
 
     #validation grid
     # omega_m_values = np.arange(0.154, 0.444, 0.0012)
